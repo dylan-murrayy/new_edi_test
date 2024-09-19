@@ -15,17 +15,17 @@ def inject_sticky_input_css():
             position: fixed;
             bottom: 40px; /* Ensure it's aligned properly */
             width: 100%;
-            padding: 5px 10px; /* Adjust padding to fit properly */
+            padding: 10px; /* Adjust padding to fit properly */
             background-color: #0E1117;
             z-index: 9999;
         }
         /* Adjust input box styling */
         input[type="text"] {
-            height: 45px; /* Set a clear height for the input */
-            padding: 0 10px;
+            height: 200px; /* Set a clear height for the input */
+            padding: 10px;
         }
         .block-container {
-            padding-bottom: 220px;  /* Ensure enough space for input */
+            padding-bottom: 200px;  /* Ensure enough space for input */
         }
         </style>
         """, unsafe_allow_html=True)
