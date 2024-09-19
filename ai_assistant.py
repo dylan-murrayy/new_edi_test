@@ -20,7 +20,7 @@ def inject_sticky_input_css():
             z-index: 9999;
         }
         .block-container {
-            padding-bottom: 150px;  /* Space for the fixed input */
+            padding-bottom: 500px;  /* Space for the fixed input */
         }
         </style>
         """, unsafe_allow_html=True)
