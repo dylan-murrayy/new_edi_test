@@ -11,7 +11,7 @@ def ai_assistant_tab(df_filtered):
         <style>
         div[data-testid="stChatInput"] {
             position: fixed;
-            bottom: 0;
+            bottom: 20px;
             width: 100%;
             background-color: #0F1117;
             padding: 10px;
