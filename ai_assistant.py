@@ -1,4 +1,5 @@
 import io
+import os
 import streamlit as st
 import pandas as pd
 import openai
@@ -18,6 +19,68 @@ from utils import (
     retrieve_messages_from_thread,
     retrieve_assistant_created_files
 )
+
+import os
+
+class MyEventHandler(AssistantEventHandler):
+    def __init__(self, chat_container, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.assistant_message = ""
+        self.executed_code = ""
+        self.chart_generated = False
+        self.chart_path = "chart.png"  # Path where the chart is saved
+        with chat_container:
+            with st.chat_message("assistant"):
+                self.content_placeholder = st.empty()
+                self.image_placeholder = st.empty()
+                self.code_placeholder = st.empty()
+
+    def on_text_delta(self, delta: TextDelta, snapshot: Text, **kwargs):
+        if delta and delta.value:
+            self.assistant_message += delta.value
+            self.content_placeholder.markdown(self.assistant_message)
+    
+    def on_image(self, image_data, **kwargs):
+        # If assistant sends image data directly
+        self.image_placeholder.image(image_data, caption="Assistant Generated Visualization")
+
+    def on_code(self, code_snippet, **kwargs):
+        self.executed_code = code_snippet
+        self.code_placeholder.code(code_snippet, language='python')
+        self.execute_code(code_snippet)
+
+    def execute_code(self, code):
+        try:
+            # Execute code securely
+            result = subprocess.run(
+                ['python', '-c', code],
+                capture_output=True,
+                text=True,
+                timeout=10,  # Prevent long-running executions
+                cwd=os.getcwd()  # Ensure the code runs in the current directory
+            )
+            output = result.stdout
+            error = result.stderr
+            if output:
+                st.write("**Output:**")
+                st.write(output)
+            if error:
+                st.write("**Error:**")
+                st.error(error)
+            
+            # Check if the chart was generated
+            if os.path.exists(self.chart_path):
+                self.chart_generated = True
+                with open(self.chart_path, 'rb') as img_file:
+                    img_data = img_file.read()
+                    self.image_placeholder.image(img_data, caption="Assistant Generated Chart")
+                # Optionally, delete the chart after displaying
+                os.remove(self.chart_path)
+        except subprocess.TimeoutExpired:
+            st.error("Code execution timed out.")
+        except Exception as e:
+            st.error(f"An error occurred during code execution: {e}")
+
 
 def ai_assistant_tab(df_filtered):
     # Apply custom CSS
