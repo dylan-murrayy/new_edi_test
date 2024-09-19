@@ -13,17 +13,23 @@ def inject_sticky_input_css():
         /* Sticky input bar at the bottom */
         div[data-testid="stTextInput"] > div {
             position: fixed;
-            bottom: 20px;
+            bottom: 0px; /* Ensure it's aligned properly */
             width: 100%;
-            padding: 1px;
+            padding: 5px 10px; /* Adjust padding to fit properly */
             background-color: #0E1117;
             z-index: 9999;
         }
+        /* Adjust input box styling */
+        input[type="text"] {
+            height: 45px; /* Set a clear height for the input */
+            padding: 0 10px;
+        }
         .block-container {
-            padding-bottom: 200px;  /* Space for the fixed input */
+            padding-bottom: 220px;  /* Ensure enough space for input */
         }
         </style>
         """, unsafe_allow_html=True)
+
 
 # Function to display the chat history
 def display_chat_history():
