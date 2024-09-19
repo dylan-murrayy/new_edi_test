@@ -1,3 +1,18 @@
+import io
+import streamlit as st
+import pandas as pd
+import openai
+from openai import AssistantEventHandler
+from openai.types.beta.threads import Text, TextDelta
+from utils import (
+    delete_files,
+    delete_thread,
+    render_custom_css,
+    render_download_files,
+    retrieve_messages_from_thread,
+    retrieve_assistant_created_files
+)
+
 def ai_assistant_tab(df_filtered):
     # Apply custom CSS
     render_custom_css()
@@ -113,8 +128,3 @@ def ai_assistant_tab(df_filtered):
 
         # Add assistant's message to chat history
         st.session_state.chat_history.append({'role': 'assistant', 'content': event_handler.assistant_message})
-
-        # Handle assistant-generated visualizations and code outputs
-        # Since we're handling images and code within the event handler, no additional steps are needed here
-
-        # Optionally, you can add further handling or logging as needed
