@@ -10,54 +10,21 @@ def ai_assistant_tab(df_filtered):
     # Custom CSS to make the input bar sticky
     st.markdown("""
         <style>
-        /* Make the input bar sticky at the bottom */
         div[data-testid="stChatInput"] {
             position: fixed;
             bottom: 0;
             width: 100%;
-            background-color: #262730;  /* Input bar colour */
+            background-color: #0E1117;
             padding: 10px;
             z-index: 100;
             box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.1);
         }
         /* Adjust the main content to prevent it from being hidden behind the input bar */
         .main .block-container {
-            padding-bottom: 150px;  /* Adjust this value if needed */
-        }
-        /* Set the background colour of the entire app */
-        .main {
-            background-color: #0E1117;  /* Background colour */
-            color: #FAFAFA;  /* Text colour */
-        }
-        /* Set the text colour in the input bar */
-        div[data-testid="stChatInput"] textarea {
-            color: #FAFAFA;  /* Text in input bar */
-        }
-        /* Set the placeholder text colour in the input bar */
-        div[data-testid="stChatInput"] textarea::placeholder {
-            color: #FAFAFA;
-        }
-        /* Style the chat messages */
-        .stChatMessage {
-            background-color: transparent;
-        }
-        .stChatMessage div {
-            color: #FAFAFA;
-        }
-        /* Scrollbar styling */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #262730;
-        }
-        ::-webkit-scrollbar-thumb {
-            background-color: #FAFAFA;
-            border-radius: 10px;
+            padding-bottom: 120px;  /* Adjust this value if needed */
         }
         </style>
         """, unsafe_allow_html=True)
-
     
     st.header("AI Assistant")
     st.write("Ask questions about your data, and the assistant will analyze it using Python code.")
