@@ -10,7 +10,8 @@ from openai.types.beta.threads import Text, TextDelta
 def inject_sticky_input_css():
     st.markdown("""
         <style>
-        .chat-input-container {
+        /* Sticky input bar at the bottom */
+        div[data-testid="stTextInput"] > div {
             position: fixed;
             bottom: 0;
             width: 100%;
@@ -19,11 +20,10 @@ def inject_sticky_input_css():
             z-index: 9999;
         }
         .block-container {
-            padding-bottom: 100px;  /* Space for the fixed input */
+            padding-bottom: 150px;  /* Space for the fixed input */
         }
         </style>
         """, unsafe_allow_html=True)
-
 
 # Function to display the chat history
 def display_chat_history():
@@ -79,8 +79,8 @@ def ai_assistant_tab(df_filtered):
 
     # Create a container for the input bar that is fixed at the bottom
     with st.container():
-        # Input bar with CSS class to make it sticky at the bottom
-        prompt = st.text_input("Enter your question about the data", key="input_prompt", label_visibility="collapsed", class_="chat-input-container")
+        # Input bar without using the class_ argument
+        prompt = st.text_input("Enter your question about the data", key="input_prompt", label_visibility="collapsed")
 
         if prompt:
             # Display the user's message immediately
