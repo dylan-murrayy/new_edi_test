@@ -4,7 +4,6 @@ import streamlit as st
 import pandas as pd
 import openai
 from openai import AssistantEventHandler
-from openai.types.beta.threads import Text, TextDelta, ToolCallDelta
 from PIL import Image
 
 def ai_assistant_tab(df_filtered):
@@ -26,8 +25,10 @@ def ai_assistant_tab(df_filtered):
         </style>
         """, unsafe_allow_html=True)
 
+
     st.header("AI Assistant")
     st.write("Ask questions about your data, and the assistant will analyze it using Python code.")
+
 
     # Initialize OpenAI client using Streamlit secrets
     try:
@@ -37,22 +38,25 @@ def ai_assistant_tab(df_filtered):
         st.error(f"Missing secret: {e}")
         st.stop()
 
-    client = openai.Client(api_key=openai_api_key)
+
+    openai.api_key = openai_api_key
 
     try:
-        assistant = client.beta.assistants.retrieve(assistant_id)
+        assistant = openai.Assistant.retrieve(assistant_id)
     except Exception as e:
         st.error(f"Failed to retrieve assistant: {e}")
         st.stop()
+
 
     # Convert dataframe to a CSV file using io.BytesIO
     csv_buffer = io.BytesIO()
     df_filtered.to_csv(csv_buffer, index=False)
     csv_buffer.seek(0)  # Reset buffer position to the start
 
+
     # Upload the CSV file as binary data
     try:
-        file = client.files.create(
+        file = openai.File.create(
             file=csv_buffer,
             purpose='assistants'
         )
@@ -60,9 +64,10 @@ def ai_assistant_tab(df_filtered):
         st.error(f"Failed to upload file: {e}")
         st.stop()
 
+
     # Update the assistant to include the file
     try:
-        client.beta.assistants.update(
+        openai.Assistant.update(
             assistant_id,
             tool_resources={
                 "code_interpreter": {
@@ -74,19 +79,22 @@ def ai_assistant_tab(df_filtered):
         st.error(f"Failed to update assistant with file resources: {e}")
         st.stop()
 
+
     # Initialize session state variables
     if 'chat_history' not in st.session_state:
         st.session_state.chat_history = []
     if 'thread_id' not in st.session_state:
         try:
-            thread = client.beta.threads.create()
+            thread = openai.Thread.create()
             st.session_state.thread_id = thread.id
         except Exception as e:
             st.error(f"Failed to create thread: {e}")
             st.stop()
 
+
     # Create a container for the chat messages
     chat_container = st.container()
+
 
     # Display chat history in the container
     with chat_container:
@@ -104,21 +112,24 @@ def ai_assistant_tab(df_filtered):
                         with st.expander("💻 Code", expanded=False):
                             st.code(message['code'], language='python')
                     if 'output' in message:
-                        st.write(f"**Output:**\n```\n{message['output']}\n```")
+                        st.write(f"**Output:**\n```python\n{message['output']}\n```")
+
 
     # User input
     if prompt := st.chat_input("Enter your question about the data"):
         # Add user message to chat history
         st.session_state.chat_history.append({'role': 'user', 'content': prompt})
 
+
         # Display the user's message immediately
         with chat_container:
             with st.chat_message("user"):
                 st.write(prompt)
 
+
         # Create a new message in the thread
         try:
-            client.beta.threads.messages.create(
+            openai.ThreadMessage.create(
                 thread_id=st.session_state.thread_id,
                 role="user",
                 content=prompt
@@ -126,6 +137,7 @@ def ai_assistant_tab(df_filtered):
         except Exception as e:
             st.error(f"Failed to create message in thread: {e}")
             st.stop()
+
 
         # Define the custom event handler
         class RealTimeCodeEventHandler(AssistantEventHandler):
@@ -135,62 +147,91 @@ def ai_assistant_tab(df_filtered):
                 self.chat_container = chat_container
                 self.code_expander = None
                 self.code_placeholder = None
+                self.output_placeholder = None
 
-            def on_text_delta(self, delta: TextDelta, snapshot: Text, **kwargs):
-                if delta and delta.value:
-                    self.assistant_message += delta.value
+            def on_text_delta(self, delta, snapshot, **kwargs):
+                """
+                Handles text deltas from the assistant.
+                """
+                if delta and delta.get('value'):
+                    self.assistant_message += delta['value']
                     self.chat_container.markdown(self.assistant_message)
 
-            def on_tool_call_delta(self, delta: ToolCallDelta, snapshot: ToolCallDelta):
-                if delta.type == "code_interpreter" and delta.code_interpreter:
-                    # Capture the code input
-                    if delta.code_interpreter.input:
-                        if not self.code_expander:
-                            self.code_expander = self.chat_container.expander("💻 Code", expanded=True)
-                            self.code_placeholder = self.code_expander.empty()
-                        self.code_placeholder.code(delta.code_interpreter.input)
-                    
-                    # Capture the code output (e.g., logs or results)
-                    if delta.code_interpreter.outputs:
-                        for output in delta.code_interpreter.outputs:
-                            if output.type == "logs":
-                                if self.code_placeholder:
-                                    self.code_expander.write(f"**Output:**\n```\n{output.logs}\n```")
+            def on_tool_call_created(self, tool_call):
+                """
+                Handles the creation of a tool call (e.g., code interpreter).
+                """
+                tool_type = tool_call.get('type', 'unknown')
+                if tool_type == 'code_interpreter':
+                    # Initialize code expander and placeholder
+                    self.code_expander = self.chat_container.expander("💻 Code", expanded=True)
+                    self.code_placeholder = self.code_expander.empty()
+                    self.output_placeholder = self.code_expander.empty()
+
+            def on_tool_call_delta(self, delta, snapshot):
+                """
+                Handles deltas within a tool call.
+                """
+                if not delta:
+                    return
+
+                tool_type = delta.get('type', 'unknown')
+                if tool_type == 'code_interpreter':
+                    code_interpreter = delta.get('code_interpreter', {})
+                    code_input = code_interpreter.get('input', '')
+                    code_outputs = code_interpreter.get('outputs', [])
+
+                    if code_input and self.code_placeholder:
+                        self.code_placeholder.code(code_input, language='python')
+
+                    for output in code_outputs:
+                        if output.get('type') == 'logs' and self.output_placeholder:
+                            self.output_placeholder.write(f"**Output:**\n```python\n{output.get('logs')}\n```")
+
+            def on_tool_call_done(self, tool_call):
+                """
+                Handles the completion of a tool call.
+                """
+                pass  # You can perform any cleanup or final updates here if necessary
+
 
         # Instantiate the custom event handler
         event_handler = RealTimeCodeEventHandler(chat_container)
 
+
         # Run the assistant
         try:
-            with client.beta.threads.runs.stream(
+            run = openai.ThreadRun.create(
                 thread_id=st.session_state.thread_id,
                 assistant_id=assistant_id,
                 event_handler=event_handler,
                 temperature=0
-            ) as stream:
-                stream.until_done()
+            )
+            run.stream_until_done()
         except Exception as e:
             st.error(f"Failed to run assistant stream: {e}")
             st.stop()
+
 
         # Add assistant's message and code to chat history
         st.session_state.chat_history.append({
             'role': 'assistant',
             'content': event_handler.assistant_message,
             'code': event_handler.code_placeholder.code if event_handler.code_placeholder else "",
-            'output': event_handler.code_expander.text if event_handler.code_expander else ""
+            'output': event_handler.output_placeholder.text if event_handler.output_placeholder else ""
         })
+
 
         # Handle any files generated by the assistant
         try:
-            messages = client.beta.threads.messages.list(thread_id=st.session_state.thread_id)
+            messages = openai.ThreadMessage.list(thread_id=st.session_state.thread_id)
             for message in messages.data:
                 if message.role == 'assistant' and hasattr(message, 'attachments') and message.attachments:
                     for attachment in message.attachments:
                         if attachment.object == 'file':
                             file_id = attachment.file_id
                             # Download the file
-                            file_content = client.files.content(file_id).read()
+                            file_content = openai.File.download(file_id).read()
                             # Check the file type and update chat history accordingly
                             if attachment.filename.endswith(('.png', '.jpg', '.jpeg')):
                                 # Convert image bytes to displayable format
