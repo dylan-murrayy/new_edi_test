@@ -136,7 +136,7 @@ def ai_assistant_tab(df_filtered):
             st.stop()
 
 
-                # Define event handler to capture assistant's response
+        # Define event handler to capture assistant's response
         class MyEventHandler(AssistantEventHandler):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
@@ -173,38 +173,6 @@ def ai_assistant_tab(df_filtered):
 
                 except Exception as e:
                     st.error(f"Failed to process image file: {e}")
-
-            def on_tool_call_created(self, tool_call):
-                """
-                Handle the creation of a tool call (e.g., code generation).
-                """
-                try:
-                    # Create a new code container for streaming code
-                    with chat_container:
-                        with st.chat_message("assistant"):
-                            self.code_placeholder = st.empty()
-                except Exception as e:
-                    st.error(f"Failed to initialize code streaming: {e}")
-
-            def on_tool_call_delta(self, delta, snapshot):
-                """
-                Handle streaming code deltas.
-                """
-                if delta.code_interpreter and delta.code_interpreter.input:
-                    # Append the new code chunk
-                    current_code = self.code_placeholder.code("")  # Initialize if not already
-                    self.code_placeholder.code(self.code_placeholder.get("code", "") + delta.code_interpreter.input, language='python')
-
-            def on_tool_call_done(self, tool_call):
-                """
-                Handle the completion of a tool call.
-                """
-                try:
-                    # Finalize the code block
-                    final_code = self.code_placeholder.code()
-                    self.code_placeholder.code(final_code, language='python')
-                except Exception as e:
-                    st.error(f"Failed to finalize code streaming: {e}")
 
 
         # Instantiate the event handler
