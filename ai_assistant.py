@@ -13,7 +13,7 @@ def inject_sticky_input_css():
         /* Sticky input bar at the bottom */
         div[data-testid="stTextInput"] > div {
             position: fixed;
-            bottom: 0;
+            bottom: 20px;
             width: 100%;
             padding: 10px;
             background-color: #0E1117;
