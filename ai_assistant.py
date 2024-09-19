@@ -19,22 +19,20 @@ def ai_assistant_tab(df_filtered):
             z-index: 100;
             box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.1);
         }
-        /* Adjust the main content to prevent it from being hidden behind the input bar */
         .main .block-container {
-            padding-bottom: 120px;  /* Adjust this value if needed */
+            padding-bottom: 150px;  /* Adjust this value if needed */
         }
         </style>
         """, unsafe_allow_html=True)
-    
+
     st.header("AI Assistant")
     st.write("Ask questions about your data, and the assistant will analyze it using Python code.")
 
-    # Initialize OpenAI client using API keys from Streamlit secrets
-    client = openai.Client(api_key=st.secrets["OPENAI_API_KEY"])
+    # Initialize OpenAI client
+    client = openai.Client(api_key=os.getenv("OPENAI_API_KEY"))
 
-    # Use existing assistant ID from Streamlit secrets
-    assistant_id = st.secrets["OPENAI_ASSISTANT_ID"]  
-    assistant = client.beta.assistants.retrieve(assistant_id)
+    # Use existing assistant ID
+    assistant_id = os.getenv("ASSISTANT_ID")  # Ensure you set this environment variable
 
     # Convert dataframe to a CSV file using io.BytesIO
     csv_buffer = io.BytesIO()
@@ -57,7 +55,6 @@ def ai_assistant_tab(df_filtered):
         }
     )
 
-
     # Initialize session state variables
     if 'chat_history' not in st.session_state:
         st.session_state.chat_history = []
@@ -72,9 +69,11 @@ def ai_assistant_tab(df_filtered):
     with chat_container:
         for message in st.session_state.chat_history:
             if message['role'] == 'user':
-                st.chat_message("User").write(message['content'])
+                with st.chat_message("user"):
+                    st.write(message['content'])
             else:
-                st.chat_message("Assistant").write(message['content'])
+                with st.chat_message("assistant"):
+                    st.write(message['content'])
 
     # User input
     if prompt := st.chat_input("Enter your question about the data"):
@@ -83,7 +82,8 @@ def ai_assistant_tab(df_filtered):
 
         # Display the user's message immediately
         with chat_container:
-            st.chat_message("User").write(prompt)
+            with st.chat_message("user"):
+                st.write(prompt)
 
         # Create a new message in the thread
         client.beta.threads.messages.create(
@@ -97,15 +97,16 @@ def ai_assistant_tab(df_filtered):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
                 self.assistant_message = ""
-                # Create a placeholder within the chat container
+                # Create a placeholder for the assistant's message
                 with chat_container:
-                    self.assistant_message_placeholder = st.chat_message("Assistant")
+                    with st.chat_message("assistant"):
+                        self.content_placeholder = st.empty()
 
             def on_text_delta(self, delta: TextDelta, snapshot: Text, **kwargs):
                 if delta and delta.value:
                     self.assistant_message += delta.value
-                    # Update the assistant's message in the placeholder
-                    self.assistant_message_placeholder.markdown(self.assistant_message)
+                    # Update the assistant's message content
+                    self.content_placeholder.markdown(self.assistant_message)
 
         # Instantiate the event handler
         event_handler = MyEventHandler()
@@ -144,3 +145,4 @@ def ai_assistant_tab(df_filtered):
                                 data=file_content,
                                 file_name=attachment.filename
                             )
+
