@@ -24,6 +24,7 @@ def inject_sticky_input_css():
         </style>
         """, unsafe_allow_html=True)
 
+
 # Function to display the chat history
 def display_chat_history():
     for message in st.session_state.chat_history:
