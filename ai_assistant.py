@@ -13,7 +13,7 @@ def ai_assistant_tab(df_filtered):
             position: fixed;
             bottom: 0;
             width: 100%;
-            background-color: white;
+            background-color: black;
             padding: 10px;
             z-index: 100;
             box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.1);
