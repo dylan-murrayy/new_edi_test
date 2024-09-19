@@ -13,14 +13,18 @@ def inject_sticky_input_css():
         /* Sticky input bar at the bottom */
         div[data-testid="stTextInput"] > div {
             position: fixed;
-            bottom: 20px;
+            bottom: 40px; /* Increase bottom margin for visibility */
             width: 100%;
-            padding: 10px;
+            padding: 15px;
             background-color: #0E1117;
             z-index: 9999;
         }
+        /* Adjust the input field to avoid slicing */
+        input[type="text"] {
+            height: 40px; /* Increase input height for full visibility */
+        }
         .block-container {
-            padding-bottom: 500px;  /* Space for the fixed input */
+            padding-bottom: 180px;  /* Extra space for the fixed input */
         }
         </style>
         """, unsafe_allow_html=True)
