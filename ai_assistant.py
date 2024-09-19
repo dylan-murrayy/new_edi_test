@@ -6,6 +6,24 @@ import openai
 from openai import AssistantEventHandler
 from openai.types.beta.threads import Text, TextDelta
 
+# Inject CSS to make input bar sticky at the bottom
+def inject_sticky_input_css():
+    st.markdown("""
+        <style>
+        .chat-input-container {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            padding: 10px;
+            background-color: #0E1117;
+            z-index: 9999;
+        }
+        .block-container {
+            padding-bottom: 100px;  /* Space for the fixed input */
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
 # Function to display the chat history
 def display_chat_history():
     for message in st.session_state.chat_history:
@@ -15,6 +33,8 @@ def display_chat_history():
             st.chat_message("assistant").write(message['content'])
 
 def ai_assistant_tab(df_filtered):
+    inject_sticky_input_css()  # Inject CSS for sticky input bar
+
     st.header("AI Assistant")
     st.write("Ask questions about your data, and the assistant will analyze it using Python code.")
 
@@ -56,71 +76,74 @@ def ai_assistant_tab(df_filtered):
     # Display chat history above the input
     display_chat_history()
 
-    # User input (placed last so it stays at the bottom)
-    prompt = st.chat_input("Enter your question about the data")
-    if prompt:
-        # Display the user's message immediately
-        with st.chat_message("user"):
-            st.write(prompt)
-        st.session_state.chat_history.append({'role': 'user', 'content': prompt})
+    # Create a container for the input bar that is fixed at the bottom
+    with st.container():
+        # Input bar with CSS class to make it sticky at the bottom
+        prompt = st.text_input("Enter your question about the data", key="input_prompt", label_visibility="collapsed", class_="chat-input-container")
 
-        # Create a placeholder for the assistant's message
-        with st.chat_message("assistant"):
-            assistant_message_placeholder = st.empty()
+        if prompt:
+            # Display the user's message immediately
+            with st.chat_message("user"):
+                st.write(prompt)
+            st.session_state.chat_history.append({'role': 'user', 'content': prompt})
 
-        # Define event handler to capture assistant's response
-        class MyEventHandler(AssistantEventHandler):
-            def __init__(self, *args, **kwargs):
-                super().__init__(*args, **kwargs)
-                self.assistant_message = ""
-                self.placeholder = assistant_message_placeholder
+            # Create a placeholder for the assistant's message
+            with st.chat_message("assistant"):
+                assistant_message_placeholder = st.empty()
 
-            def on_text_delta(self, delta: TextDelta, snapshot: Text, **kwargs):
-                if delta and delta.value:
-                    self.assistant_message += delta.value
-                    self.placeholder.markdown(self.assistant_message)
+            # Define event handler to capture assistant's response
+            class MyEventHandler(AssistantEventHandler):
+                def __init__(self, *args, **kwargs):
+                    super().__init__(*args, **kwargs)
+                    self.assistant_message = ""
+                    self.placeholder = assistant_message_placeholder
 
-        # Instantiate the event handler
-        event_handler = MyEventHandler()
+                def on_text_delta(self, delta: TextDelta, snapshot: Text, **kwargs):
+                    if delta and delta.value:
+                        self.assistant_message += delta.value
+                        self.placeholder.markdown(self.assistant_message)
 
-        # Create a new message in the thread
-        client.beta.threads.messages.create(
-            thread_id=st.session_state.thread_id,
-            role="user",
-            content=prompt
-        )
+            # Instantiate the event handler
+            event_handler = MyEventHandler()
 
-        # Run the assistant and stream the response
-        with client.beta.threads.runs.stream(
-            thread_id=st.session_state.thread_id,
-            assistant_id=assistant_id,
-            event_handler=event_handler,
-            temperature=0
-        ) as stream:
-            stream.until_done()
+            # Create a new message in the thread
+            client.beta.threads.messages.create(
+                thread_id=st.session_state.thread_id,
+                role="user",
+                content=prompt
+            )
 
-        # Add assistant's message to the chat history
-        st.session_state.chat_history.append({'role': 'assistant', 'content': event_handler.assistant_message})
+            # Run the assistant and stream the response
+            with client.beta.threads.runs.stream(
+                thread_id=st.session_state.thread_id,
+                assistant_id=assistant_id,
+                event_handler=event_handler,
+                temperature=0
+            ) as stream:
+                stream.until_done()
 
-        # Handle any files generated by the assistant
-        messages = client.beta.threads.messages.list(thread_id=st.session_state.thread_id)
-        for message in messages.data:
-            if message.role == 'assistant' and hasattr(message, 'attachments') and message.attachments:
-                for attachment in message.attachments:
-                    if attachment.object == 'file':
-                        file_id = attachment.file_id
-                        # Download the file
-                        file_content = client.files.content(file_id).read()
-                        # Display the file content if appropriate
-                        if attachment.filename.endswith(('.png', '.jpg', '.jpeg')):
-                            st.image(file_content)
-                        elif attachment.filename.endswith('.csv'):
-                            # Read CSV into a dataframe
-                            df = pd.read_csv(io.BytesIO(file_content))
-                            st.write(df)
-                        else:
-                            st.download_button(
-                                label=f"Download {attachment.filename}",
-                                data=file_content,
-                                file_name=attachment.filename
-                            )
+            # Add assistant's message to the chat history
+            st.session_state.chat_history.append({'role': 'assistant', 'content': event_handler.assistant_message})
+
+            # Handle any files generated by the assistant
+            messages = client.beta.threads.messages.list(thread_id=st.session_state.thread_id)
+            for message in messages.data:
+                if message.role == 'assistant' and hasattr(message, 'attachments') and message.attachments:
+                    for attachment in message.attachments:
+                        if attachment.object == 'file':
+                            file_id = attachment.file_id
+                            # Download the file
+                            file_content = client.files.content(file_id).read()
+                            # Display the file content if appropriate
+                            if attachment.filename.endswith(('.png', '.jpg', '.jpeg')):
+                                st.image(file_content)
+                            elif attachment.filename.endswith('.csv'):
+                                # Read CSV into a dataframe
+                                df = pd.read_csv(io.BytesIO(file_content))
+                                st.write(df)
+                            else:
+                                st.download_button(
+                                    label=f"Download {attachment.filename}",
+                                    data=file_content,
+                                    file_name=attachment.filename
+                                )
