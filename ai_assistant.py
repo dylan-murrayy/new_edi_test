@@ -19,53 +19,6 @@ from utils import (
     retrieve_assistant_created_files
 )
 
-# Define the custom event handler
-class MyEventHandler(AssistantEventHandler):
-    def __init__(self, chat_container, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.assistant_message = ""
-        self.executed_code = ""
-        with chat_container:
-            with st.chat_message("assistant"):
-                self.content_placeholder = st.empty()
-                self.image_placeholder = st.empty()
-                self.code_placeholder = st.empty()
-
-    def on_text_delta(self, delta: TextDelta, snapshot: Text, **kwargs):
-        if delta and delta.value:
-            self.assistant_message += delta.value
-            self.content_placeholder.markdown(self.assistant_message)
-    
-    def on_image(self, image_data, **kwargs):
-        self.image_placeholder.image(image_data, caption="Assistant Generated Visualization")
-    
-    def on_code(self, code_snippet, **kwargs):
-        self.executed_code = code_snippet
-        self.code_placeholder.code(code_snippet, language='python')
-        self.execute_code(code_snippet)
-    
-    def execute_code(self, code):
-        try:
-            # Execute code securely
-            result = subprocess.run(
-                ['python', '-c', code],
-                capture_output=True,
-                text=True,
-                timeout=10  # Prevent long-running executions
-            )
-            output = result.stdout
-            error = result.stderr
-            if output:
-                st.write("**Output:**")
-                st.write(output)
-            if error:
-                st.write("**Error:**")
-                st.error(error)
-        except subprocess.TimeoutExpired:
-            st.error("Code execution timed out.")
-        except Exception as e:
-            st.error(f"An error occurred during code execution: {e}")
-
 def ai_assistant_tab(df_filtered):
     # Apply custom CSS
     render_custom_css()
